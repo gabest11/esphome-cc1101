@@ -1,7 +1,7 @@
 /*
   https://github.com/gabest11/cc1101
 
-  This is a CC1101 transciever component that works with esphome's remote_transmitter/remote_receiver.
+  This is a CC1101 transceiver component that works with esphome's remote_transmitter/remote_receiver.
   
   It can be compiled with Arduino and esp-idf framework and should support any esphome compatible board through the SPI Bus.
 
