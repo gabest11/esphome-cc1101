@@ -1,0 +1,130 @@
+substitutions:
+  plug_name: cc1101
+
+external_components:
+  - source: github://gabest11/cc1101@main
+    components: [ cc1101 ]
+#  - source:
+#      type: local
+#      path: components
+
+esphome:
+  name: ${plug_name}
+
+esp32:
+  board: nodemcu-32s
+  variant: esp32
+  framework:
+    type: arduino
+#  framework:
+#    type: esp-idf
+#    version: recommended
+
+wifi:
+  ssid: !secret wifi_name
+  password: !secret wifi_pass
+
+logger:
+  level: DEBUG
+
+ota:
+  password: !secret every_password
+
+spi:
+  clk_pin: 18
+  miso_pin: 19
+  mosi_pin: 23
+
+switch:
+  - platform: cc1101
+    name: "${plug_name} cc1101"
+    id: transceiver
+    cs_pin: 5
+    gdo0: 32
+    gdo2: 33
+    bandwidth: 200
+    frequency: 433920
+  
+remote_transmitter:
+  - pin: GPIO32 # GDO0
+    carrier_duty_percent: 100%
+
+remote_receiver:
+  pin: GPIO33 # GDO2
+  dump:
+    - rc_switch
+    # - raw
+  # Settings to optimize recognition of RF devices
+  tolerance: 50%
+  #buffer_size: 2kb
+  filter: 250us
+  idle: 4ms
+
+api:
+  services:
+    - service: 'remote_transmit'
+      variables:
+        code: string
+      then:
+        - cc1101.begin_tx: transceiver
+        - remote_transmitter.transmit_rc_switch_raw:
+            code: !lambda 'return code.c_str();'
+            protocol:
+              pulse_length: 420
+              sync: [1,31]
+              zero: [1,3]
+              one: [3,1]
+              inverted: true
+            repeat:
+              times: 10
+        - cc1101.end_tx: transceiver
+
+#mqtt:
+#  on_json_message:
+#    topic: "${plug_name}/remote_transmit"
+#    then:
+#      - cc1101.begin_tx: transceiver
+#      - remote_transmitter.transmit_rc_switch_raw:
+#          code: !lambda |-
+#            if(x.containsKey("code")) return x["code"];
+#            return "111111111111111111111111";
+#          protocol:
+#            pulse_length: 420
+#            sync: [1,31]
+#            zero: [1,3]
+#            one: [3,1]
+#            inverted: false
+#          repeat:
+#            times: 10
+#      - cc1101.end_tx: transceiver
+
+button:
+  - platform: template
+    name: "${plug_name} gate"
+    on_press:
+      - cc1101.begin_tx: transceiver
+      - remote_transmitter.transmit_rc_switch_raw:
+          code: '0111000110010011110110010100011111110001001011110111'
+          protocol:
+            pulse_length: 434
+            sync: [1,6]
+            zero: [1,2]
+            one: [2,1]
+            inverted: true
+          repeat:
+            times: 10
+      - cc1101.end_tx: transceiver
+
+binary_sensor:
+  - platform: remote_receiver
+    name: "${plug_name} window"
+    rc_switch_raw:
+      code: '110111110001111011100110'
+      protocol:
+        pulse_length: 420
+        sync: [1,31]
+        zero: [1,3]
+        one: [3,1]
+        inverted: false
+    filters:
+      - delayed_off: 1000ms

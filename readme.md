@@ -1,26 +1,13 @@
-# IMPORTANT
---> make sure to copy both `cc1101.yaml` and `cc1101.h` <--
+This is a CC1101 transciever component that works with esphome's remote_transmitter/remote_receiver.
+  
+It can be compiled with Arduino and esp-idf framework and should support any esphome compatible board through the SPI Bus.
 
-![image](https://esphome.io/_images/made-for-esphome-black-on-white.svg)
-# CC1101 support for ESPHome
-![image](./cc1101-variants.png)
+The source code is a mashup of the following github projects with some special esphome sauce:
 
-![image](./3-receivers-in-node.jpeg)
+https://github.com/dbuezas/esphome-cc1101 (the original esphome component)
+https://github.com/nistvan86/esphome-q7rf (how to use esphome with spi)
+https://github.com/LSatan/SmartRC-CC1101-Driver-Lib (cc1101 setup code)
 
-# Basic Usage
-see cc1101.yaml
-
-# Raw signal visualizer
-https://github.com/dbuezas/esphome-remote_receiver-oscilloscope
-
-# Advanced
-See cc1101-advanced.yaml
-
-Adds RSSI sensor and number components to tweak frequency and bandwidth on the fly.
-I use this to tweak the values to maximize reception.
-
-
-# Links:
-
-* Discord thread: https://discord.com/channels/429907082951524364/838121145113772033/959545959484911666
-* Github support request issue: https://github.com/esphome/feature-requests/issues/59
+TODO: Convert it from Switch to a Sensor and return some diagnostic values (rssi...)
+TODO: RP2040? (USE_RP2040)
+TODO: Libretiny? (USE_LIBRETINY)
