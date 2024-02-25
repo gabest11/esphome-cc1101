@@ -67,10 +67,10 @@ void CC1101Switch::setup()
   pinMode(_gdo0, OUTPUT);
   pinMode(_gdo2, INPUT);
 #else  
-	//gpio_reset_pin((gpio_num_t)_gdo0);
-	//gpio_reset_pin((gpio_num_t)_gdo2);
-	gpio_set_direction((gpio_num_t)_gdo0, GPIO_MODE_OUTPUT);
-	gpio_set_direction((gpio_num_t)_gdo2, GPIO_MODE_INPUT);
+  //gpio_reset_pin((gpio_num_t)_gdo0);
+  //gpio_reset_pin((gpio_num_t)_gdo2);
+  gpio_set_direction((gpio_num_t)_gdo0, GPIO_MODE_OUTPUT);
+  gpio_set_direction((gpio_num_t)_gdo2, GPIO_MODE_INPUT);
 #endif
 
   this->spi_setup();
