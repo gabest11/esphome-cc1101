@@ -1,5 +1,5 @@
 /*
-  https://github.com/gabest11/cc1101
+  https://github.com/gabest11/esphome-cc1101
 
   This is a CC1101 transceiver component that works with esphome's remote_transmitter/remote_receiver.
   

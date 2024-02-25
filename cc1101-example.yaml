@@ -2,7 +2,7 @@ substitutions:
   plug_name: cc1101
 
 external_components:
-  - source: github://gabest11/cc1101@main
+  - source: github://gabest11/esphome-cc1101@main
     components: [ cc1101 ]
 #  - source:
 #      type: local
