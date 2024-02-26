@@ -48,6 +48,10 @@ CC1101Switch::CC1101Switch() : PollingComponent(1000)
   _bandwidth = 200;
   _frequency = 433920;
 
+  _partnum = 0;
+  _version = 0;
+  _last_rssi = 0;
+
   _mode = false;
   _modulation = 2;
   _chan = 0;
@@ -130,15 +134,25 @@ void CC1101Switch::setup()
 
 void CC1101Switch::update()
 {
+  /* TODO: switch => sensor 
+  int32_t rssi = get_rssi();
+
+  if(rssi != _last_rssi)
+  {
+    publish_state(rssi);
+
+    _last_rssi = rssi;
+  }
+  */
 }
 
 void CC1101Switch::dump_config()
 {
 //  ESP_LOGCONFIG(TAG, "CC1101:");
 #ifdef USE_ARDUINO
-  ESP_LOGCONFIG(TAG, "CC1101 (Arduino):");
+  ESP_LOGCONFIG(TAG, "CC1101 partnum %02x version %02x (Arduino):", _partnum, _version);
 #else // USE_ESP_IDF
-  ESP_LOGCONFIG(TAG, "CC1101 (esp-idf):");
+  ESP_LOGCONFIG(TAG, "CC1101 partnum %02x version %02x (esp-idf):", _partnum, _version);
 #endif
   LOG_PIN("  CC1101 CS Pin: ", this->cs_);
   ESP_LOGCONFIG(TAG, "  CC1101 GDO0: %d", _gdo0);
@@ -167,12 +181,12 @@ bool CC1101Switch::reset()
 
   // Read part number and version
 
-  uint8_t partnum = read_status_register(CC1101_PARTNUM);
-  uint8_t version = read_status_register(CC1101_VERSION);
+  _partnum = read_status_register(CC1101_PARTNUM);
+  _version = read_status_register(CC1101_VERSION);
 
-  ESP_LOGI(TAG, "CC1101 found with partnum: %02x and version: %02x", partnum, version);
+  ESP_LOGI(TAG, "CC1101 found with partnum: %02x and version: %02x", _partnum, _version);
 
-  return version > 0;
+  return _version > 0;
 }
 
 void CC1101Switch::send_cmd(uint8_t cmd)
@@ -222,9 +236,9 @@ void CC1101Switch::write_register(uint8_t reg, uint8_t value)
   write_register(reg, arr, 1);
 }
 
-void CC1101Switch::write_register_burst(uint8_t reg, uint8_t* value, size_t length)
+void CC1101Switch::write_register_burst(uint8_t reg, uint8_t* buffer, size_t length)
 {
-  write_register(reg | CC1101_WRITE_BURST, value, length);
+  write_register(reg | CC1101_WRITE_BURST, buffer, length);
 }
 /*
 bool CC1101Switch::send_data(const uint8_t* data, size_t length)
@@ -551,19 +565,6 @@ void CC1101Switch::set_rx()
   _trxstate = 2;
 }
 
-int32_t CC1101Switch::get_rssi()
-{
-  int32_t rssi;
-  rssi = read_status_register(CC1101_RSSI);
-  if(rssi >= 128) rssi -= 256;
-  return (rssi / 2) - 74;
-}
-
-uint8_t CC1101Switch::get_lqi()
-{
-  return read_status_register(CC1101_LQI);
-}
-
 void CC1101Switch::set_sres()
 {
   send_cmd(CC1101_SRES);
@@ -601,31 +602,58 @@ void CC1101Switch::split_MDMCFG4()
   _m4DaRa = calc & 0x0f;
 }
 
+int32_t CC1101Switch::get_rssi()
+{
+  int32_t rssi;
+  rssi = read_status_register(CC1101_RSSI);
+  if(rssi >= 128) rssi -= 256;
+  return (rssi / 2) - 74;
+}
+
+uint8_t CC1101Switch::get_lqi()
+{
+  return read_status_register(CC1101_LQI);
+}
+
 void CC1101Switch::begin_tx()
 {
   set_tx();
+
+  if(_gdo0 == _gdo2)
+  {
 #ifdef USE_ESP8266
+  #ifdef USE_ARDUINO
+    noInterrupts();
+  #else // USE_ESP_IDF
+    portDISABLE_INTERRUPTS()
+  #endif
+#endif
 #ifdef USE_ARDUINO
-  pinMode(_gdo0, OUTPUT);
-  noInterrupts();
+    pinMode(_gdo0, OUTPUT);
 #else // USE_ESP_IDF
-  gpio_set_direction((gpio_num_t)_gdo0, GPIO_MODE_OUTPUT);
-  portDISABLE_INTERRUPTS()
+    gpio_set_direction((gpio_num_t)_gdo0, GPIO_MODE_OUTPUT);
 #endif
-#endif
+  }
 }
 
 void CC1101Switch::end_tx()
 {
+  if(_gdo0 == _gdo2)
+  {
 #ifdef USE_ESP8266
+  #ifdef USE_ARDUINO
+    interrupts();
+  #else // USE_ESP_IDF
+    portENABLE_INTERRUPTS()
+  #endif
+#endif
 #ifdef USE_ARDUINO
-  interrupts();
-  pinMode(_gdo0, INPUT);
+    pinMode(_gdo0, INPUT);
 #else // USE_ESP_IDF
-  portENABLE_INTERRUPTS()
-  gpio_set_direction((gpio_num_t)_gdo0, GPIO_MODE_INPUT);
+    gpio_set_direction((gpio_num_t)_gdo0, GPIO_MODE_INPUT);
 #endif
-#endif
+  }
+
   set_rx();
   set_rx(); // yes, twice (really?)
 }

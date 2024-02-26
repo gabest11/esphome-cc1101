@@ -15,10 +15,14 @@ class CC1101Switch
     public spi::SPIDevice<spi::BIT_ORDER_MSB_FIRST, spi::CLOCK_POLARITY_LOW, spi::CLOCK_PHASE_LEADING, spi::DATA_RATE_1KHZ>
 {
 protected:
-  uint8_t _gdo0;
-  uint8_t _gdo2;
+  int32_t _gdo0;
+  int32_t _gdo2;
   uint32_t _bandwidth;
   uint32_t _frequency;
+
+  uint8_t _partnum;
+  uint8_t _version;
+  int32_t _last_rssi;
 
   bool reset();
   void send_cmd(uint8_t cmd);
@@ -59,8 +63,6 @@ protected:
   void set_rxbw(uint32_t bw);
   void set_tx();
   void set_rx();
-  int32_t get_rssi();
-  uint8_t get_lqi();
   void set_sres();
   void set_sidle();
   void set_sleep();
@@ -71,15 +73,18 @@ protected:
 public:
   CC1101Switch();
 
+  void set_cc1101_gdo0(uint8_t pin) { _gdo0 = pin; if(_gdo2 == -1) _gdo2 = pin; }
+  void set_cc1101_gdo2(uint8_t pin) { _gdo2 = pin; }
+  void set_cc1101_bandwidth(uint32_t bandwidth) { _bandwidth = bandwidth; }
+  void set_cc1101_frequency(uint32_t frequency) { _frequency = frequency; }
+
   void setup() override;
   void update() override;
   void write_state(bool state) override {} // TODO
   void dump_config() override;
 
-  void set_cc1101_gdo0(uint8_t pin) {_gdo0 = pin;}
-  void set_cc1101_gdo2(uint8_t pin) {_gdo2 = pin;}
-  void set_cc1101_bandwidth(uint32_t bandwidth) {_bandwidth = bandwidth;}
-  void set_cc1101_frequency(uint32_t frequency) {_frequency = frequency;}
+  int32_t get_rssi();
+  uint8_t get_lqi();
 
   void begin_tx();
   void end_tx();
