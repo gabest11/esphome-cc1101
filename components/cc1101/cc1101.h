@@ -2,7 +2,6 @@
 
 #include "esphome/core/component.h"
 #include "esphome/components/switch/switch.h"
-#include "esphome/components/api/custom_api_device.h"
 #include "esphome/components/spi/spi.h"
 
 namespace esphome {
@@ -10,7 +9,6 @@ namespace cc1101 {
 
 class CC1101Switch 
   : public switch_::Switch,
-    public api::CustomAPIDevice,
     public PollingComponent,
     public spi::SPIDevice<spi::BIT_ORDER_MSB_FIRST, spi::CLOCK_POLARITY_LOW, spi::CLOCK_PHASE_LEADING, spi::DATA_RATE_1KHZ>
 {
