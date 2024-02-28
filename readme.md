@@ -1,6 +1,6 @@
 This is a CC1101 transceiver component that works with esphome's remote_transmitter/remote_receiver.
   
-It can be compiled with Arduino and esp-idf framework and should support any esphome compatible board through the SPI Bus.
+It can be compiled with Arduino or the esp-idf framework and should support any esphome compatible board through the SPI Bus.
 
 On ESP8266, you can use the same pin for GDO and GD2 (it is an optional parameter).
 
@@ -24,3 +24,5 @@ Tested with:
 | c3 supermini  | 5  | 7  | 6  | 10 | 3  | 4  | 0 | 1 | add one dummy transmitter [#2934](https://github.com/esphome/issues/issues/2934) |
 | nodemcuv2     | 12 | 13 | 14 | 15 | 5 |  | 4 | TX | still possible to use i2c with TX |
 | d1_mini       | 12 | 13 | 14 | 15 | 5 |  | 4 | TX |  |
+
+SDA/SCL is not needed of course, they are just there as suggestions in case you also need I2C on such a low pin count board.
