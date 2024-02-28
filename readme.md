@@ -12,16 +12,15 @@ The source code is a mashup of the following github projects with some special e
 
 TODO:
 
-- Convert it from Switch to a Sensor and return some diagnostic values (rssi...)
 - RP2040? (USE_RP2040)
 - Libretiny? (USE_LIBRETINY)
 
 Tested with:
 
 | Board         | MISO     | MOSI    | SCK     | CSN     | GDO0    | GDO2    | SDA     | SCL     |      |
-| ------------- | -------- | ------- | ------- | ------- | ------- | ------- | ------- | ------- | -------- |
+| :------------ | :------: | :-----: | :-----: | :-----: | :-----: | :-----: | :-----: | :-----: | :------- |
 | nodemcu-32s   | 19 | 23 | 18 | 5  | 32 | 33 |   |   |  |
 | lolin_s2_mini | 37 | 35 | 36 | 34 | 8  | 9  |   |   |  |
 | c3 supermini  | 5  | 7  | 6  | 10 | 3  | 4  | 0 | 1 | add one dummy transmitter [#2934](https://github.com/esphome/issues/issues/2934) |
 | nodemcuv2     | 12 | 13 | 14 | 15 | 5 |  | 4 | TX | still possible to use i2c with TX |
-| d1_mini_lite  | 12 | 13 | 14 | 15 | 5 |  | 4 | TX |  |
+| d1_mini       | 12 | 13 | 14 | 15 | 5 |  | 4 | TX |  |

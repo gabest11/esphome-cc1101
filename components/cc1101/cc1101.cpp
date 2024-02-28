@@ -5,13 +5,14 @@
   
   It can be compiled with Arduino and esp-idf framework and should support any esphome compatible board through the SPI Bus.
 
+  On ESP8266, you can use the same pin for GDO and GD2 (it is an optional parameter).
+
   The source code is a mashup of the following github projects with some special esphome sauce:
 
   https://github.com/dbuezas/esphome-cc1101 (the original esphome component)
   https://github.com/nistvan86/esphome-q7rf (how to use esphome with spi)
   https://github.com/LSatan/SmartRC-CC1101-Driver-Lib (cc1101 setup code)
 
-  TODO: Convert it from Switch to a Sensor and return some diagnostic values (rssi...)
   TODO: RP2040? (USE_RP2040)
   TODO: Libretiny? (USE_LIBRETINY)
 */
@@ -19,6 +20,7 @@
 #include "esphome/core/log.h"
 #include "cc1101.h"
 #include "cc1101defs.h"
+#include <limits.h>
 
 #ifdef USE_ARDUINO
 #include <Arduino.h>
@@ -30,7 +32,7 @@ long map(long x, long in_min, long in_max, long out_min, long out_max) { return 
 namespace esphome {
 namespace cc1101 {
 
-static const char *TAG = "cc1101.switch";
+static const char *TAG = "cc1101";
 
 uint8_t PA_TABLE[8]     {0x00,0xC0,0x00,0x00,0x00,0x00,0x00,0x00};
 //                       -30  -20  -15  -10   0    5    7    10
@@ -41,16 +43,19 @@ uint8_t PA_TABLE_868[10] {0x03,0x17,0x1D,0x26,0x37,0x50,0x86,0xCD,0xC5,0xC0};  /
 //                        -30  -20  -15  -10  -6    0    5    7    10   11
 uint8_t PA_TABLE_915[10] {0x03,0x0E,0x1E,0x27,0x38,0x8E,0x84,0xCC,0xC3,0xC0};  // 900 - 928
 
-CC1101Switch::CC1101Switch() : PollingComponent(1000)
+CC1101::CC1101()
 {
-  _gdo0 = -1;
-  _gdo2 = -1;
+  _gdo0 = NULL;
+  _gdo2 = NULL;
   _bandwidth = 200;
   _frequency = 433920;
+  _rssi_sensor = NULL;
+  _lqi_sensor = NULL;
 
   _partnum = 0;
   _version = 0;
-  _last_rssi = 0;
+  _last_rssi = INT_MIN;
+  _last_lqi = INT_MIN;
 
   _mode = false;
   _modulation = 2;
@@ -65,17 +70,12 @@ CC1101Switch::CC1101Switch() : PollingComponent(1000)
   _clb[3][0] = 77; _clb[3][1] = 79;
 }
 
-void CC1101Switch::setup()
+void CC1101::setup()
 {
-#ifdef USE_ARDUINO
-  pinMode(_gdo0, OUTPUT);
-  pinMode(_gdo2, INPUT);
-#else  
-  //gpio_reset_pin((gpio_num_t)_gdo0);
-  //gpio_reset_pin((gpio_num_t)_gdo2);
-  gpio_set_direction((gpio_num_t)_gdo0, GPIO_MODE_OUTPUT);
-  gpio_set_direction((gpio_num_t)_gdo2, GPIO_MODE_INPUT);
-#endif
+  _gdo0->setup();
+  _gdo2->setup();
+  _gdo0->pin_mode(gpio::FLAG_OUTPUT);
+  _gdo2->pin_mode(gpio::FLAG_INPUT);
 
   this->spi_setup();
 
@@ -132,21 +132,34 @@ void CC1101Switch::setup()
   ESP_LOGI(TAG, "CC1101 initialized.");
 }
 
-void CC1101Switch::update()
+void CC1101::update()
 {
-  /* TODO: switch => sensor 
-  int32_t rssi = get_rssi();
-
-  if(rssi != _last_rssi)
+  if(_rssi_sensor != NULL)
   {
-    publish_state(rssi);
+    int32_t rssi = get_rssi();
 
-    _last_rssi = rssi;
+    if(rssi != _last_rssi)
+    {
+      _rssi_sensor->publish_state(rssi);
+
+      _last_rssi = rssi;
+    }
   }
-  */
+
+  if(_lqi_sensor != NULL)
+  {
+    int32_t lqi = get_lqi() & 0x7f; // msb = CRC ok or not set
+
+    if(lqi != _last_lqi)
+    {
+      _lqi_sensor->publish_state(lqi);
+
+      _last_lqi = lqi;
+    }
+  }
 }
 
-void CC1101Switch::dump_config()
+void CC1101::dump_config()
 {
 //  ESP_LOGCONFIG(TAG, "CC1101:");
 #ifdef USE_ARDUINO
@@ -155,13 +168,15 @@ void CC1101Switch::dump_config()
   ESP_LOGCONFIG(TAG, "CC1101 partnum %02x version %02x (esp-idf):", _partnum, _version);
 #endif
   LOG_PIN("  CC1101 CS Pin: ", this->cs_);
-  ESP_LOGCONFIG(TAG, "  CC1101 GDO0: %d", _gdo0);
-  ESP_LOGCONFIG(TAG, "  CC1101 GDO2: %d", _gdo2);
+  LOG_PIN("  CC1101 GDO0: ", _gdo0);
+  LOG_PIN("  CC1101 GDO2: ", _gdo2);
   ESP_LOGCONFIG(TAG, "  CC1101 Bandwith: %d KHz", _bandwidth);
   ESP_LOGCONFIG(TAG, "  CC1101 Frequency: %d KHz", _frequency);
+  LOG_SENSOR("  ", "RSSI", _rssi_sensor);
+  LOG_SENSOR("  ", "LQI", _lqi_sensor);
 }
 
-bool CC1101Switch::reset()
+bool CC1101::reset()
 {
   // Chip reset sequence. CS wiggle (CC1101 manual page 45)
 
@@ -189,14 +204,14 @@ bool CC1101Switch::reset()
   return _version > 0;
 }
 
-void CC1101Switch::send_cmd(uint8_t cmd)
+void CC1101::send_cmd(uint8_t cmd)
 {
   this->enable();
   this->transfer_byte(cmd);
   this->disable();
 }
 
-uint8_t CC1101Switch::read_register(uint8_t reg)
+uint8_t CC1101::read_register(uint8_t reg)
 {
   this->enable();
   this->transfer_byte(reg);
@@ -205,24 +220,24 @@ uint8_t CC1101Switch::read_register(uint8_t reg)
   return value;
 }
 
-uint8_t CC1101Switch::read_config_register(uint8_t reg)
+uint8_t CC1101::read_config_register(uint8_t reg)
 {
   return read_register(reg | CC1101_READ_SINGLE);
 }
 
-uint8_t CC1101Switch::read_status_register(uint8_t reg)
+uint8_t CC1101::read_status_register(uint8_t reg)
 {
   return read_register(reg | CC1101_READ_BURST);
 }
 
-void CC1101Switch::read_register_burst(uint8_t reg, uint8_t* buffer, size_t length)
+void CC1101::read_register_burst(uint8_t reg, uint8_t* buffer, size_t length)
 {
   this->enable();
   this->write_byte(reg | CC1101_READ_BURST);
   this->read_array(buffer, length);
   this->disable();
 }
-void CC1101Switch::write_register(uint8_t reg, uint8_t* value, size_t length)
+void CC1101::write_register(uint8_t reg, uint8_t* value, size_t length)
 {
   this->enable();
   this->transfer_byte(reg);
@@ -230,18 +245,18 @@ void CC1101Switch::write_register(uint8_t reg, uint8_t* value, size_t length)
   this->disable();
 }
 
-void CC1101Switch::write_register(uint8_t reg, uint8_t value)
+void CC1101::write_register(uint8_t reg, uint8_t value)
 {
   uint8_t arr[1] = {value};
   write_register(reg, arr, 1);
 }
 
-void CC1101Switch::write_register_burst(uint8_t reg, uint8_t* buffer, size_t length)
+void CC1101::write_register_burst(uint8_t reg, uint8_t* buffer, size_t length)
 {
   write_register(reg | CC1101_WRITE_BURST, buffer, length);
 }
 /*
-bool CC1101Switch::send_data(const uint8_t* data, size_t length)
+bool CC1101::send_data(const uint8_t* data, size_t length)
 {
   uint8_t buffer[length];
   
@@ -270,7 +285,7 @@ bool CC1101Switch::send_data(const uint8_t* data, size_t length)
 
 // ELECHOUSE_CC1101 stuff
 
-void CC1101Switch::set_mode(bool s)
+void CC1101::set_mode(bool s)
 {
   _mode = s;
 
@@ -294,7 +309,7 @@ void CC1101Switch::set_mode(bool s)
   set_modulation(_modulation);
 }
 
-void CC1101Switch::set_modulation(uint8_t m)
+void CC1101::set_modulation(uint8_t m)
 {
   if(m > 4) m = 4;
 
@@ -317,7 +332,7 @@ void CC1101Switch::set_modulation(uint8_t m)
   set_pa(_pa);
 }
 
-void CC1101Switch::set_pa(int8_t pa)
+void CC1101::set_pa(int8_t pa)
 {
   _pa = pa;
 
@@ -395,7 +410,7 @@ void CC1101Switch::set_pa(int8_t pa)
   write_register_burst(CC1101_PATABLE, PA_TABLE, sizeof(PA_TABLE));
 }
 
-void CC1101Switch::set_frequency(uint32_t f)
+void CC1101::set_frequency(uint32_t f)
 {
   _frequency = f;
 
@@ -512,7 +527,7 @@ void CC1101Switch::set_frequency(uint32_t f)
   }
 }
 
-void CC1101Switch::set_clb(uint8_t b, uint8_t s, uint8_t e)
+void CC1101::set_clb(uint8_t b, uint8_t s, uint8_t e)
 {
   if(b < 4) 
   {
@@ -521,7 +536,7 @@ void CC1101Switch::set_clb(uint8_t b, uint8_t s, uint8_t e)
   }
 }
 
-void CC1101Switch::set_rxbw(uint32_t bw)
+void CC1101::set_rxbw(uint32_t bw)
 {
   _bandwidth = bw;
 
@@ -549,7 +564,7 @@ void CC1101Switch::set_rxbw(uint32_t bw)
   write_register(CC1101_MDMCFG4, _m4RxBw + _m4DaRa);
 }
 
-void CC1101Switch::set_tx()
+void CC1101::set_tx()
 {
   ESP_LOGI(TAG, "CC1101 set_tx");
   send_cmd(CC1101_SIDLE);
@@ -557,7 +572,7 @@ void CC1101Switch::set_tx()
   _trxstate = 1;
 }
 
-void CC1101Switch::set_rx()
+void CC1101::set_rx()
 {
   ESP_LOGI(TAG, "CC1101 set_rx");
   send_cmd(CC1101_SIDLE);
@@ -565,26 +580,26 @@ void CC1101Switch::set_rx()
   _trxstate = 2;
 }
 
-void CC1101Switch::set_sres()
+void CC1101::set_sres()
 {
   send_cmd(CC1101_SRES);
   _trxstate = 0;
 }
 
-void CC1101Switch::set_sidle()
+void CC1101::set_sidle()
 {
   send_cmd(CC1101_SIDLE);
   _trxstate = 0;
 }
 
-void CC1101Switch::set_sleep()
+void CC1101::set_sleep()
 {
   _trxstate = 0;
   send_cmd(CC1101_SIDLE); // Exit RX / TX, turn off frequency synthesizer and exit
   send_cmd(CC1101_SPWD); // Enter power down mode when CSn goes high.
 }
 
-void CC1101Switch::split_MDMCFG2()
+void CC1101::split_MDMCFG2()
 {
   uint8_t calc = read_status_register(CC1101_MDMCFG2);
 
@@ -594,7 +609,7 @@ void CC1101Switch::split_MDMCFG2()
   _m2SYNCM = calc & 0x07;
 }
 
-void CC1101Switch::split_MDMCFG4()
+void CC1101::split_MDMCFG4()
 {
   uint8_t calc = read_status_register(CC1101_MDMCFG4);
 
@@ -602,7 +617,7 @@ void CC1101Switch::split_MDMCFG4()
   _m4DaRa = calc & 0x0f;
 }
 
-int32_t CC1101Switch::get_rssi()
+int32_t CC1101::get_rssi()
 {
   int32_t rssi;
   rssi = read_status_register(CC1101_RSSI);
@@ -610,12 +625,12 @@ int32_t CC1101Switch::get_rssi()
   return (rssi / 2) - 74;
 }
 
-uint8_t CC1101Switch::get_lqi()
+uint8_t CC1101::get_lqi()
 {
   return read_status_register(CC1101_LQI);
 }
 
-void CC1101Switch::begin_tx()
+void CC1101::begin_tx()
 {
   set_tx();
 
@@ -628,15 +643,11 @@ void CC1101Switch::begin_tx()
     portDISABLE_INTERRUPTS()
   #endif
 #endif
-#ifdef USE_ARDUINO
-    pinMode(_gdo0, OUTPUT);
-#else // USE_ESP_IDF
-    gpio_set_direction((gpio_num_t)_gdo0, GPIO_MODE_OUTPUT);
-#endif
+    _gdo0->pin_mode(gpio::FLAG_OUTPUT);
   }
 }
 
-void CC1101Switch::end_tx()
+void CC1101::end_tx()
 {
   if(_gdo0 == _gdo2)
   {
@@ -647,11 +658,7 @@ void CC1101Switch::end_tx()
     portENABLE_INTERRUPTS()
   #endif
 #endif
-#ifdef USE_ARDUINO
-    pinMode(_gdo0, INPUT);
-#else // USE_ESP_IDF
-    gpio_set_direction((gpio_num_t)_gdo0, GPIO_MODE_INPUT);
-#endif
+    _gdo0->pin_mode(gpio::FLAG_INPUT);
   }
 
   set_rx();

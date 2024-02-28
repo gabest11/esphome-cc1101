@@ -1,5 +1,5 @@
 substitutions:
-  plug_name: cc1101
+  device_name: cc1101
 
 external_components:
   - source: github://gabest11/esphome-cc1101@main
@@ -9,7 +9,7 @@ external_components:
 #      path: components
 
 esphome:
-  name: ${plug_name}
+  name: ${device_name}
 
 esp32:
   board: nodemcu-32s
@@ -31,19 +31,22 @@ ota:
   password: !secret every_password
 
 spi:
-  clk_pin: 18
-  miso_pin: 19
-  mosi_pin: 23
+  clk_pin: GPIO18
+  miso_pin: GPIO19
+  mosi_pin: GPIO23
 
-switch:
+sensor:
   - platform: cc1101
-    name: "${plug_name} cc1101"
     id: transceiver
-    cs_pin: 5
-    gdo0: 32
-    gdo2: 33
+    cs_pin: GPIO5
+    gdo0: GPIO32
+    gdo2: GPIO33
     bandwidth: 200
     frequency: 433920
+    rssi:
+      name: "${device_name} rssi"
+    lqi:
+      name: "${device_name} lqi"
   
 remote_transmitter:
   - pin: GPIO32 # GDO0
@@ -81,7 +84,7 @@ api:
 
 #mqtt:
 #  on_json_message:
-#    topic: "${plug_name}/remote_transmit"
+#    topic: "${device_name}/remote_transmit"
 #    then:
 #      - cc1101.begin_tx: transceiver
 #      - remote_transmitter.transmit_rc_switch_raw:
@@ -100,7 +103,7 @@ api:
 
 button:
   - platform: template
-    name: "${plug_name} gate"
+    name: "${device_name} gate"
     on_press:
       - cc1101.begin_tx: transceiver
       - remote_transmitter.transmit_rc_switch_raw:
@@ -117,7 +120,7 @@ button:
 
 binary_sensor:
   - platform: remote_receiver
-    name: "${plug_name} window"
+    name: "${device_name} window"
     rc_switch_raw:
       code: '110111110001111011100110'
       protocol:
