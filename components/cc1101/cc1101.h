@@ -13,17 +13,17 @@ class CC1101
     public spi::SPIDevice<spi::BIT_ORDER_MSB_FIRST, spi::CLOCK_POLARITY_LOW, spi::CLOCK_PHASE_LEADING, spi::DATA_RATE_1KHZ>
 {
 protected:
-  InternalGPIOPin* _gdo0;
-  InternalGPIOPin* _gdo2;
-  uint32_t _bandwidth;
-  uint32_t _frequency;
-  sensor::Sensor* _rssi_sensor;
-  sensor::Sensor* _lqi_sensor;
+  InternalGPIOPin* gdo0_;
+  InternalGPIOPin* gdo2_;
+  uint32_t bandwidth_;
+  uint32_t frequency_;
+  sensor::Sensor* rssi_sensor_;
+  sensor::Sensor* lqi_sensor_;
 
-  uint8_t _partnum;
-  uint8_t _version;
-  int32_t _last_rssi;
-  int32_t _last_lqi;
+  uint8_t partnum_;
+  uint8_t version_;
+  int32_t last_rssi_;
+  int32_t last_lqi_;
 
   bool reset();
   void send_cmd(uint8_t cmd);
@@ -38,23 +38,23 @@ protected:
 
   // ELECHOUSE_CC1101 stuff
 
-  bool _mode;
-  uint8_t _modulation;
-  uint8_t _frend0;
-  uint8_t _chan;
-  int8_t _pa;
-  uint8_t _last_pa;
-  uint8_t _m4RxBw;
-  uint8_t _m4DaRa;
-  uint8_t _m2DCOFF;
-  uint8_t _m2MODFM;
-  uint8_t _m2MANCH;
-  uint8_t _m2SYNCM;
-  uint8_t _m1FEC;
-  uint8_t _m1PRE;
-  uint8_t _m1CHSP;
-  uint8_t _trxstate;
-  uint8_t _clb[4][2];
+  bool mode_;
+  uint8_t modulation_;
+  uint8_t frend0_;
+  uint8_t chan_;
+  int8_t pa_;
+  uint8_t last_pa_;
+  uint8_t m4RxBw_;
+  uint8_t m4DaRa_;
+  uint8_t m2DCOFF_;
+  uint8_t m2MODFM_;
+  uint8_t m2MANCH_;
+  uint8_t m2SYNCM_;
+  uint8_t m1FEC_;
+  uint8_t m1PRE_;
+  uint8_t m1CHSP_;
+  uint8_t trxstate_;
+  uint8_t clb_[4][2];
 
   void set_mode(bool s);
   void set_frequency(uint32_t f);
@@ -74,12 +74,12 @@ protected:
 public:
   CC1101();
 
-  void set_config_gdo0(InternalGPIOPin* pin) { _gdo0 = pin; if(_gdo2 == NULL) _gdo2 = pin; }
-  void set_config_gdo2(InternalGPIOPin* pin) { _gdo2 = pin; }
-  void set_config_bandwidth(uint32_t bandwidth) { _bandwidth = bandwidth; }
-  void set_config_frequency(uint32_t frequency) { _frequency = frequency; }
-  void set_config_rssi_sensor(sensor::Sensor* rssi_sensor) { _rssi_sensor = rssi_sensor; }
-  void set_config_lqi_sensor(sensor::Sensor* lqi_sensor) { _lqi_sensor = lqi_sensor; }
+  void set_config_gdo0(InternalGPIOPin* pin);
+  void set_config_gdo2(InternalGPIOPin* pin);
+  void set_config_bandwidth(uint32_t bandwidth);
+  void set_config_frequency(uint32_t frequency);
+  void set_config_rssi_sensor(sensor::Sensor* rssi_sensor);
+  void set_config_lqi_sensor(sensor::Sensor* lqi_sensor);
 
   void setup() override;
   void update() override;

@@ -45,87 +45,125 @@ uint8_t PA_TABLE_915[10] {0x03,0x0E,0x1E,0x27,0x38,0x8E,0x84,0xCC,0xC3,0xC0};  /
 
 CC1101::CC1101()
 {
-  _gdo0 = NULL;
-  _gdo2 = NULL;
-  _bandwidth = 200;
-  _frequency = 433920;
-  _rssi_sensor = NULL;
-  _lqi_sensor = NULL;
+  this->gdo0_ = NULL;
+  this->gdo2_ = NULL;
+  this->bandwidth_ = 200;
+  this->frequency_ = 433920;
+  this->rssi_sensor_ = NULL;
+  this->lqi_sensor_ = NULL;
 
-  _partnum = 0;
-  _version = 0;
-  _last_rssi = INT_MIN;
-  _last_lqi = INT_MIN;
+  this->partnum_ = 0;
+  this->version_ = 0;
+  this->last_rssi_ = INT_MIN;
+  this->last_lqi_ = INT_MIN;
 
-  _mode = false;
-  _modulation = 2;
-  _chan = 0;
-  _pa = 12;
-  _last_pa = -1;
-  _m4RxBw = 0;
-  _trxstate = 0;
-  _clb[0][0] = 24; _clb[0][1] = 28;
-  _clb[1][0] = 31; _clb[1][1] = 38;
-  _clb[2][0] = 65; _clb[2][1] = 76;
-  _clb[3][0] = 77; _clb[3][1] = 79;
+  this->mode_ = false;
+  this->modulation_ = 2;
+  this->chan_ = 0;
+  this->pa_ = 12;
+  this->last_pa_ = -1;
+  this->m4RxBw_ = 0;
+  this->trxstate_ = 0;
+
+  this->clb_[0][0] = 24; 
+  this->clb_[0][1] = 28;
+  this->clb_[1][0] = 31; 
+  this->clb_[1][1] = 38;
+  this->clb_[2][0] = 65; 
+  this->clb_[2][1] = 76;
+  this->clb_[3][0] = 77; 
+  this->clb_[3][1] = 79;
+}
+
+void CC1101::set_config_gdo0(InternalGPIOPin* pin)
+{
+  gdo0_ = pin; 
+  
+  if(gdo2_ == NULL) gdo2_ = pin;
+}
+
+void CC1101::set_config_gdo2(InternalGPIOPin* pin)
+{
+  gdo2_ = pin;
+}
+
+void CC1101::set_config_bandwidth(uint32_t bandwidth)
+{
+  bandwidth_ = bandwidth;
+}
+
+void CC1101::set_config_frequency(uint32_t frequency)
+{
+  frequency_ = frequency;
+}
+
+void CC1101::set_config_rssi_sensor(sensor::Sensor* rssi_sensor)
+{
+  rssi_sensor_ = rssi_sensor;
+}
+
+void CC1101::set_config_lqi_sensor(sensor::Sensor* lqi_sensor)
+{
+  lqi_sensor_ = lqi_sensor;
 }
 
 void CC1101::setup()
 {
-  _gdo0->setup();
-  _gdo2->setup();
-  _gdo0->pin_mode(gpio::FLAG_OUTPUT);
-  _gdo2->pin_mode(gpio::FLAG_INPUT);
+  this->gdo0_->setup();
+  this->gdo2_->setup();
+  this->gdo0_->pin_mode(gpio::FLAG_OUTPUT);
+  this->gdo2_->pin_mode(gpio::FLAG_INPUT);
 
   this->spi_setup();
 
-  if(!reset())
+  if(!this->reset())
   {
+    mark_failed();
     ESP_LOGE(TAG, "Failed to reset CC1101 modem. Check connection.");
     return;
   }
 
   // ELECHOUSE_cc1101.Init();
 
-  write_register(CC1101_FSCTRL1, 0x06);
+  this->write_register(CC1101_FSCTRL1, 0x06);
 
-  set_mode(false);
-  set_frequency(_frequency);
+  this->set_mode(false);
+  this->set_frequency(this->frequency_);
 
-  write_register(CC1101_MDMCFG1, 0x02);
-  write_register(CC1101_MDMCFG0, 0xF8);
-  write_register(CC1101_CHANNR, _chan);
-  write_register(CC1101_DEVIATN, 0x47);
-  write_register(CC1101_FREND1, 0x56);
-  write_register(CC1101_MCSM0, 0x18);
-  write_register(CC1101_FOCCFG, 0x16);
-  write_register(CC1101_BSCFG, 0x1C);
-  write_register(CC1101_AGCCTRL2, 0xC7);
-  write_register(CC1101_AGCCTRL1, 0x00);
-  write_register(CC1101_AGCCTRL0, 0xB2);
-  write_register(CC1101_FSCAL3, 0xE9);
-  write_register(CC1101_FSCAL2, 0x2A);
-  write_register(CC1101_FSCAL1, 0x00);
-  write_register(CC1101_FSCAL0, 0x1F);
-  write_register(CC1101_FSTEST, 0x59);
-  write_register(CC1101_TEST2, 0x81);
-  write_register(CC1101_TEST1, 0x35);
-  write_register(CC1101_TEST0, 0x09);
-  write_register(CC1101_PKTCTRL1, 0x04);
-  write_register(CC1101_ADDR, 0x00);
-  write_register(CC1101_PKTLEN, 0x00);
+  this->write_register(CC1101_MDMCFG1, 0x02);
+  this->write_register(CC1101_MDMCFG0, 0xF8);
+  this->write_register(CC1101_CHANNR, this->chan_);
+  this->write_register(CC1101_DEVIATN, 0x47);
+  this->write_register(CC1101_FREND1, 0x56);
+  this->write_register(CC1101_MCSM0, 0x18);
+  this->write_register(CC1101_FOCCFG, 0x16);
+  this->write_register(CC1101_BSCFG, 0x1C);
+  this->write_register(CC1101_AGCCTRL2, 0xC7);
+  this->write_register(CC1101_AGCCTRL1, 0x00);
+  this->write_register(CC1101_AGCCTRL0, 0xB2);
+  this->write_register(CC1101_FSCAL3, 0xE9);
+  this->write_register(CC1101_FSCAL2, 0x2A);
+  this->write_register(CC1101_FSCAL1, 0x00);
+  this->write_register(CC1101_FSCAL0, 0x1F);
+  this->write_register(CC1101_FSTEST, 0x59);
+  this->write_register(CC1101_TEST2, 0x81);
+  this->write_register(CC1101_TEST1, 0x35);
+  this->write_register(CC1101_TEST0, 0x09);
+  this->write_register(CC1101_PKTCTRL1, 0x04);
+  this->write_register(CC1101_ADDR, 0x00);
+  this->write_register(CC1101_PKTLEN, 0x00);
 
   // ELECHOUSE_cc1101.setRxBW(_bandwidth);
 
-  set_rxbw(_bandwidth);
+  this->set_rxbw(this->bandwidth_);
 
   // ELECHOUSE_cc1101.setMHZ(_freq);
 
-  set_frequency(_frequency); // TODO: already set
+  this->set_frequency(this->frequency_); // TODO: already set
 
   //
 
-  set_rx();
+  this->set_rx();
 
   //
 
@@ -134,46 +172,41 @@ void CC1101::setup()
 
 void CC1101::update()
 {
-  if(_rssi_sensor != NULL)
+  if(this->rssi_sensor_ != NULL)
   {
-    int32_t rssi = get_rssi();
+    int32_t rssi = this->get_rssi();
 
-    if(rssi != _last_rssi)
+    if(rssi != this->last_rssi_)
     {
-      _rssi_sensor->publish_state(rssi);
+      this->rssi_sensor_->publish_state(rssi);
 
-      _last_rssi = rssi;
+      this->last_rssi_ = rssi;
     }
   }
 
-  if(_lqi_sensor != NULL)
+  if(this->lqi_sensor_ != NULL)
   {
-    int32_t lqi = get_lqi() & 0x7f; // msb = CRC ok or not set
+    int32_t lqi = this->get_lqi() & 0x7f; // msb = CRC ok or not set
 
-    if(lqi != _last_lqi)
+    if(lqi != this->last_lqi_)
     {
-      _lqi_sensor->publish_state(lqi);
+      this->lqi_sensor_->publish_state(lqi);
 
-      _last_lqi = lqi;
+      this->last_lqi_ = lqi;
     }
   }
 }
 
 void CC1101::dump_config()
 {
-//  ESP_LOGCONFIG(TAG, "CC1101:");
-#ifdef USE_ARDUINO
-  ESP_LOGCONFIG(TAG, "CC1101 partnum %02x version %02x (Arduino):", _partnum, _version);
-#else // USE_ESP_IDF
-  ESP_LOGCONFIG(TAG, "CC1101 partnum %02x version %02x (esp-idf):", _partnum, _version);
-#endif
+  ESP_LOGCONFIG(TAG, "CC1101 partnum %02x version %02x:", this->partnum_, this->version_);
   LOG_PIN("  CC1101 CS Pin: ", this->cs_);
-  LOG_PIN("  CC1101 GDO0: ", _gdo0);
-  LOG_PIN("  CC1101 GDO2: ", _gdo2);
-  ESP_LOGCONFIG(TAG, "  CC1101 Bandwith: %d KHz", _bandwidth);
-  ESP_LOGCONFIG(TAG, "  CC1101 Frequency: %d KHz", _frequency);
-  LOG_SENSOR("  ", "RSSI", _rssi_sensor);
-  LOG_SENSOR("  ", "LQI", _lqi_sensor);
+  LOG_PIN("  CC1101 GDO0: ", this->gdo0_);
+  LOG_PIN("  CC1101 GDO2: ", this->gdo2_);
+  ESP_LOGCONFIG(TAG, "  CC1101 Bandwith: %d KHz", this->bandwidth_);
+  ESP_LOGCONFIG(TAG, "  CC1101 Frequency: %d KHz", this->frequency_);
+  LOG_SENSOR("  ", "RSSI", this->rssi_sensor_);
+  LOG_SENSOR("  ", "LQI", this->lqi_sensor_);
 }
 
 bool CC1101::reset()
@@ -190,18 +223,18 @@ bool CC1101::reset()
   this->cs_->digital_write(false);
   delayMicroseconds(41);
   
-  send_cmd(CC1101_SRES);
+  this->send_cmd(CC1101_SRES);
 
   ESP_LOGD(TAG, "Issued CC1101 reset sequence.");
 
   // Read part number and version
 
-  _partnum = read_status_register(CC1101_PARTNUM);
-  _version = read_status_register(CC1101_VERSION);
+  this->partnum_ = this->read_status_register(CC1101_PARTNUM);
+  this->version_ = this->read_status_register(CC1101_VERSION);
 
-  ESP_LOGI(TAG, "CC1101 found with partnum: %02x and version: %02x", _partnum, _version);
+  ESP_LOGI(TAG, "CC1101 found with partnum: %02x and version: %02x", this->partnum_, this->version_);
 
-  return _version > 0;
+  return this->version_ > 0;
 }
 
 void CC1101::send_cmd(uint8_t cmd)
@@ -222,12 +255,12 @@ uint8_t CC1101::read_register(uint8_t reg)
 
 uint8_t CC1101::read_config_register(uint8_t reg)
 {
-  return read_register(reg | CC1101_READ_SINGLE);
+  return this->read_register(reg | CC1101_READ_SINGLE);
 }
 
 uint8_t CC1101::read_status_register(uint8_t reg)
 {
-  return read_register(reg | CC1101_READ_BURST);
+  return this->read_register(reg | CC1101_READ_BURST);
 }
 
 void CC1101::read_register_burst(uint8_t reg, uint8_t* buffer, size_t length)
@@ -248,12 +281,12 @@ void CC1101::write_register(uint8_t reg, uint8_t* value, size_t length)
 void CC1101::write_register(uint8_t reg, uint8_t value)
 {
   uint8_t arr[1] = {value};
-  write_register(reg, arr, 1);
+  this->write_register(reg, arr, 1);
 }
 
 void CC1101::write_register_burst(uint8_t reg, uint8_t* buffer, size_t length)
 {
-  write_register(reg | CC1101_WRITE_BURST, buffer, length);
+  this->write_register(reg | CC1101_WRITE_BURST, buffer, length);
 }
 /*
 bool CC1101::send_data(const uint8_t* data, size_t length)
@@ -262,20 +295,20 @@ bool CC1101::send_data(const uint8_t* data, size_t length)
   
   memcpy(buffer, data, lenght);
 
-  send_cmd(CC1101_SIDLE);
-  send_cmd(CC1101_SFRX);
-  send_cmd(CC1101_SFTX);
+  this->send_cmd(CC1101_SIDLE);
+  this->send_cmd(CC1101_SFRX);
+  this->send_cmd(CC1101_SFTX);
 
-  write_register_burst(CC1101_TXFIFO, buffer, length);
+  this->write_register_burst(CC1101_TXFIFO, buffer, length);
 
-  send_cmd(CC1101_STX);
+  this->send_cmd(CC1101_STX);
 
-  uint8_t state = read_status_register(CC1101_MARCSTATE) & 0x1f;
+  uint8_t state = this->read_status_register(CC1101_MARCSTATE) & 0x1f;
 
   if(state != CC1101_MARCSTATE_TX && state != CC1101_MARCSTATE_TX_END && state != CC1101_MARCSTATE_RXTX_SWITCH)
   {
     ESP_LOGE(TAG, "CC1101 in invalid state after sending, returning to idle. State: 0x%02x", state);
-    send_cmd(CC1101_SIDLE);
+    this->send_cmd(CC1101_SIDLE);
     return false;
   }
 
@@ -287,58 +320,58 @@ bool CC1101::send_data(const uint8_t* data, size_t length)
 
 void CC1101::set_mode(bool s)
 {
-  _mode = s;
+  this->mode_ = s;
 
   if(s)
   {
-    write_register(CC1101_IOCFG2, 0x0B);
-    write_register(CC1101_IOCFG0, 0x06);
-    write_register(CC1101_PKTCTRL0, 0x05);
-    write_register(CC1101_MDMCFG3, 0xF8);
-    write_register(CC1101_MDMCFG4, 11 + _m4RxBw);
+    this->write_register(CC1101_IOCFG2, 0x0B);
+    this->write_register(CC1101_IOCFG0, 0x06);
+    this->write_register(CC1101_PKTCTRL0, 0x05);
+    this->write_register(CC1101_MDMCFG3, 0xF8);
+    this->write_register(CC1101_MDMCFG4, 11 + this->m4RxBw_);
   }
   else
   {
-    write_register(CC1101_IOCFG2, 0x0D);
-    write_register(CC1101_IOCFG0, 0x0D);
-    write_register(CC1101_PKTCTRL0, 0x32);
-    write_register(CC1101_MDMCFG3, 0x93);
-    write_register(CC1101_MDMCFG4, 7 + _m4RxBw);
+    this->write_register(CC1101_IOCFG2, 0x0D);
+    this->write_register(CC1101_IOCFG0, 0x0D);
+    this->write_register(CC1101_PKTCTRL0, 0x32);
+    this->write_register(CC1101_MDMCFG3, 0x93);
+    this->write_register(CC1101_MDMCFG4, 7 + this->m4RxBw_);
   }
   
-  set_modulation(_modulation);
+  this->set_modulation(this->modulation_);
 }
 
 void CC1101::set_modulation(uint8_t m)
 {
   if(m > 4) m = 4;
 
-  _modulation = m;
+  this->modulation_ = m;
 
-  split_MDMCFG2();
+  this->split_MDMCFG2();
 
   switch(m)
   {
-  case 0: _m2MODFM = 0x00; _frend0 = 0x10; break; // 2-FSK
-  case 1: _m2MODFM = 0x10; _frend0 = 0x10; break; // GFSK
-  case 2: _m2MODFM = 0x30; _frend0 = 0x11; break; // ASK
-  case 3: _m2MODFM = 0x40; _frend0 = 0x10; break; // 4-FSK
-  case 4: _m2MODFM = 0x70; _frend0 = 0x10; break; // MSK
+  case 0: this->m2MODFM_ = 0x00; this->frend0_ = 0x10; break; // 2-FSK
+  case 1: this->m2MODFM_ = 0x10; this->frend0_ = 0x10; break; // GFSK
+  case 2: this->m2MODFM_ = 0x30; this->frend0_ = 0x11; break; // ASK
+  case 3: this->m2MODFM_ = 0x40; this->frend0_ = 0x10; break; // 4-FSK
+  case 4: this->m2MODFM_ = 0x70; this->frend0_ = 0x10; break; // MSK
   }
 
-  write_register(CC1101_MDMCFG2, _m2DCOFF + _m2MODFM + _m2MANCH + _m2SYNCM);
-  write_register(CC1101_FREND0, _frend0);
+  this->write_register(CC1101_MDMCFG2, this->m2DCOFF_ + this->m2MODFM_ + this->m2MANCH_ + this->m2SYNCM_);
+  this->write_register(CC1101_FREND0, this->frend0_);
 
-  set_pa(_pa);
+  this->set_pa(this->pa_);
 }
 
 void CC1101::set_pa(int8_t pa)
 {
-  _pa = pa;
+  this->pa_ = pa;
 
   int a;
 
-  if(_frequency >= 300000 && _frequency <= 348000)
+  if(this->frequency_ >= 300000 && this->frequency_ <= 348000)
   {
     if(pa <= -30) a = PA_TABLE_315[0];
     else if(pa > -30 && pa <= -20) a = PA_TABLE_315[1];
@@ -348,9 +381,9 @@ void CC1101::set_pa(int8_t pa)
     else if(pa > 0 && pa <= 5) a = PA_TABLE_315[5];
     else if(pa > 5 && pa <= 7) a = PA_TABLE_315[6];
     else a = PA_TABLE_315[7];
-    _last_pa = 1;
+    this->last_pa_ = 1;
   }
-  else if(_frequency >= 378000 && _frequency <= 464000)
+  else if(this->frequency_ >= 378000 && this->frequency_ <= 464000)
   {
     if(pa <= -30) a = PA_TABLE_433[0];
     else if(pa > -30 && pa <= -20) a = PA_TABLE_433[1];
@@ -360,9 +393,9 @@ void CC1101::set_pa(int8_t pa)
     else if(pa > 0 && pa <= 5) a = PA_TABLE_433[5];
     else if(pa > 5 && pa <= 7) a = PA_TABLE_433[6];
     else a = PA_TABLE_433[7];
-    _last_pa = 2;
+    this->last_pa_ = 2;
   }
-  else if(_frequency >= 779000 && _frequency < 900000)
+  else if(this->frequency_ >= 779000 && this->frequency_ < 900000)
   {
     if(pa <= -30) a = PA_TABLE_868[0];
     else if(pa > -30 && pa <= -20) a = PA_TABLE_868[1];
@@ -374,9 +407,9 @@ void CC1101::set_pa(int8_t pa)
     else if(pa > 5 && pa <= 7) a = PA_TABLE_868[7];
     else if(pa > 7 && pa <= 10) a = PA_TABLE_868[8];
     else a = PA_TABLE_868[9];
-    _last_pa = 3;
+    this->last_pa_ = 3;
   }
-  else if(_frequency >= 900000 && _frequency <= 928000)
+  else if(this->frequency_ >= 900000 && this->frequency_ <= 928000)
   {
     if(pa <= -30) a = PA_TABLE_915[0];
     else if(pa > -30 && pa <= -20) a = PA_TABLE_915[1];
@@ -388,15 +421,15 @@ void CC1101::set_pa(int8_t pa)
     else if(pa > 5 && pa <= 7) a = PA_TABLE_915[7];
     else if(pa > 7 && pa <= 10) a = PA_TABLE_915[8];
     else a = PA_TABLE_915[9];
-    _last_pa = 4;
+    this->last_pa_ = 4;
   }
   else
   {
-    ESP_LOGE(TAG, "CC1101 set_pa(%d) frequency out of range: %d", pa, _frequency);
+    ESP_LOGE(TAG, "CC1101 set_pa(%d) frequency out of range: %d", pa, this->frequency_);
     return;
   }
 
-  if(_modulation == 2)
+  if(this->modulation_ == 2)
   {
     PA_TABLE[0] = 0;
     PA_TABLE[1] = a;
@@ -407,12 +440,12 @@ void CC1101::set_pa(int8_t pa)
     PA_TABLE[1] = 0;
   }
 
-  write_register_burst(CC1101_PATABLE, PA_TABLE, sizeof(PA_TABLE));
+  this->write_register_burst(CC1101_PATABLE, PA_TABLE, sizeof(PA_TABLE));
 }
 
 void CC1101::set_frequency(uint32_t f)
 {
-  _frequency = f;
+  this->frequency_ = f;
 
   uint8_t freq2 = 0;
   uint8_t freq1 = 0;
@@ -437,9 +470,9 @@ void CC1101::set_frequency(uint32_t f)
   }
   */
 
-  write_register(CC1101_FREQ2, freq2);
-  write_register(CC1101_FREQ1, freq1);
-  write_register(CC1101_FREQ0, freq0);
+  this->write_register(CC1101_FREQ2, freq2);
+  this->write_register(CC1101_FREQ1, freq1);
+  this->write_register(CC1101_FREQ0, freq0);
 
   // calibrate
 
@@ -447,83 +480,83 @@ void CC1101::set_frequency(uint32_t f)
 
   if(mhz >= 300 && mhz <= 348)
   {
-    write_register(CC1101_FSCTRL0, map(mhz, 300, 348, _clb[0][0], _clb[0][1]));
+    this->write_register(CC1101_FSCTRL0, map(mhz, 300, 348, this->clb_[0][0], this->clb_[0][1]));
 
     if(mhz < 322.88)
     {
-      write_register(CC1101_TEST0, 0x0B);
+      this->write_register(CC1101_TEST0, 0x0B);
     }
     else
     {
-      write_register(CC1101_TEST0, 0x09);
+      this->write_register(CC1101_TEST0, 0x09);
 
-      uint8_t s = read_status_register(CC1101_FSCAL2);
+      uint8_t s = this->read_status_register(CC1101_FSCAL2);
 
       if(s < 32)
       {
-        write_register(CC1101_FSCAL2, s + 32);
+        this->write_register(CC1101_FSCAL2, s + 32);
       }
 
-      if(_last_pa != 1) set_pa(_pa);
+      if(this->last_pa_ != 1) this->set_pa(this->pa_);
     }
   }
   else if(mhz >= 378 && mhz <= 464)
   {
-    write_register(CC1101_FSCTRL0, map(mhz, 378, 464, _clb[1][0], _clb[1][1]));
+    this->write_register(CC1101_FSCTRL0, map(mhz, 378, 464, this->clb_[1][0], this->clb_[1][1]));
 
     if(mhz < 430.5)
     {
-      write_register(CC1101_TEST0, 0x0B);
+      this->write_register(CC1101_TEST0, 0x0B);
     }
     else
     {
-      write_register(CC1101_TEST0, 0x09);
+      this->write_register(CC1101_TEST0, 0x09);
 
-      uint8_t s = read_status_register(CC1101_FSCAL2);
+      uint8_t s = this->read_status_register(CC1101_FSCAL2);
 
       if(s < 32)
       {
-        write_register(CC1101_FSCAL2, s + 32);
+        this->write_register(CC1101_FSCAL2, s + 32);
       }
 
-      if(_last_pa != 2) set_pa(_pa);
+      if(this->last_pa_ != 2) this->set_pa(this->pa_);
     }
   }
   else if(mhz >= 779 && mhz <= 899.99)
   {
-    write_register(CC1101_FSCTRL0, map(mhz, 779, 899, _clb[2][0], _clb[2][1]));
+    this->write_register(CC1101_FSCTRL0, map(mhz, 779, 899, this->clb_[2][0], this->clb_[2][1]));
 
     if(mhz < 861)
     {
-      write_register(CC1101_TEST0, 0x0B);
+      this->write_register(CC1101_TEST0, 0x0B);
     }
     else
     {
-      write_register(CC1101_TEST0, 0x09);
+      this->write_register(CC1101_TEST0, 0x09);
 
-      uint8_t s = read_status_register(CC1101_FSCAL2);
+      uint8_t s = this->read_status_register(CC1101_FSCAL2);
 
       if(s < 32)
       {
-        write_register(CC1101_FSCAL2, s + 32);
+        this->write_register(CC1101_FSCAL2, s + 32);
       }
 
-      if(_last_pa != 3) set_pa(_pa);
+      if(this->last_pa_ != 3) this->set_pa(this->pa_);
     }
   }
   else if(mhz >= 900 && mhz <= 928)
   {
-    write_register(CC1101_FSCTRL0, map(mhz, 900, 928, _clb[3][0], _clb[3][1]));
-    write_register(CC1101_TEST0, 0x09);
+    this->write_register(CC1101_FSCTRL0, map(mhz, 900, 928, this->clb_[3][0], this->clb_[3][1]));
+    this->write_register(CC1101_TEST0, 0x09);
 
-    uint8_t s = read_status_register(CC1101_FSCAL2);
+    uint8_t s = this->read_status_register(CC1101_FSCAL2);
     
     if(s < 32)
     {
-      write_register(CC1101_FSCAL2, s + 32);
+      this->write_register(CC1101_FSCAL2, s + 32);
     }
 
-    if(_last_pa != 4) set_pa(_pa);
+    if(this->last_pa_ != 4) this->set_pa(this->pa_);
   }
 }
 
@@ -531,16 +564,16 @@ void CC1101::set_clb(uint8_t b, uint8_t s, uint8_t e)
 {
   if(b < 4) 
   {
-    _clb[b][0] = s;
-    _clb[b][1] = e;
+    this->clb_[b][0] = s;
+    this->clb_[b][1] = e;
   }
 }
 
 void CC1101::set_rxbw(uint32_t bw)
 {
-  _bandwidth = bw;
+  this->bandwidth_ = bw;
 
-  float f = (float)_bandwidth;
+  float f = (float)this->bandwidth_;
 
   int s1 = 3;
   int s2 = 3;
@@ -557,84 +590,84 @@ void CC1101::set_rxbw(uint32_t bw)
     s2--;
   }
 
-  split_MDMCFG4();
+  this->split_MDMCFG4();
 
-  _m4RxBw = (s1 << 6) | (s2 << 4);
+  this->m4RxBw_ = (s1 << 6) | (s2 << 4);
 
-  write_register(CC1101_MDMCFG4, _m4RxBw + _m4DaRa);
+  this->write_register(CC1101_MDMCFG4, this->m4RxBw_ + this->m4DaRa_);
 }
 
 void CC1101::set_tx()
 {
   ESP_LOGI(TAG, "CC1101 set_tx");
-  send_cmd(CC1101_SIDLE);
-  send_cmd(CC1101_STX);
-  _trxstate = 1;
+  this->send_cmd(CC1101_SIDLE);
+  this->send_cmd(CC1101_STX);
+  this->trxstate_ = 1;
 }
 
 void CC1101::set_rx()
 {
   ESP_LOGI(TAG, "CC1101 set_rx");
-  send_cmd(CC1101_SIDLE);
-  send_cmd(CC1101_SRX);
-  _trxstate = 2;
+  this->send_cmd(CC1101_SIDLE);
+  this->send_cmd(CC1101_SRX);
+  this->trxstate_ = 2;
 }
 
 void CC1101::set_sres()
 {
-  send_cmd(CC1101_SRES);
-  _trxstate = 0;
+  this->send_cmd(CC1101_SRES);
+  this->trxstate_ = 0;
 }
 
 void CC1101::set_sidle()
 {
-  send_cmd(CC1101_SIDLE);
-  _trxstate = 0;
+  this->send_cmd(CC1101_SIDLE);
+  this->trxstate_ = 0;
 }
 
 void CC1101::set_sleep()
 {
-  _trxstate = 0;
-  send_cmd(CC1101_SIDLE); // Exit RX / TX, turn off frequency synthesizer and exit
-  send_cmd(CC1101_SPWD); // Enter power down mode when CSn goes high.
+  this->send_cmd(CC1101_SIDLE); // Exit RX / TX, turn off frequency synthesizer and exit
+  this->send_cmd(CC1101_SPWD); // Enter power down mode when CSn goes high.
+  this->trxstate_ = 0;
 }
 
 void CC1101::split_MDMCFG2()
 {
-  uint8_t calc = read_status_register(CC1101_MDMCFG2);
+  uint8_t calc = this->read_status_register(CC1101_MDMCFG2);
 
-  _m2DCOFF = calc & 0x80;
-  _m2MODFM = calc & 0x70;
-  _m2MANCH = calc & 0x08;
-  _m2SYNCM = calc & 0x07;
+  this->m2DCOFF_ = calc & 0x80;
+  this->m2MODFM_ = calc & 0x70;
+  this->m2MANCH_ = calc & 0x08;
+  this->m2SYNCM_ = calc & 0x07;
 }
 
 void CC1101::split_MDMCFG4()
 {
-  uint8_t calc = read_status_register(CC1101_MDMCFG4);
+  uint8_t calc = this->read_status_register(CC1101_MDMCFG4);
 
-  _m4RxBw = calc & 0xf0;
-  _m4DaRa = calc & 0x0f;
+  this->m4RxBw_ = calc & 0xf0;
+  this->m4DaRa_ = calc & 0x0f;
 }
 
 int32_t CC1101::get_rssi()
 {
   int32_t rssi;
-  rssi = read_status_register(CC1101_RSSI);
+  rssi = this->read_status_register(CC1101_RSSI);
   if(rssi >= 128) rssi -= 256;
   return (rssi / 2) - 74;
 }
 
 uint8_t CC1101::get_lqi()
 {
-  return read_status_register(CC1101_LQI);
+  return this->read_status_register(CC1101_LQI);
 }
 
 void CC1101::begin_tx()
 {
-  set_tx();
+  this->set_tx();
 
-  if(_gdo0 == _gdo2)
+  if(this->gdo0_ == this->gdo2_)
   {
 #ifdef USE_ESP8266
   #ifdef USE_ARDUINO
@@ -643,13 +676,13 @@ void CC1101::begin_tx()
     portDISABLE_INTERRUPTS()
   #endif
 #endif
-    _gdo0->pin_mode(gpio::FLAG_OUTPUT);
+    this->gdo0_->pin_mode(gpio::FLAG_OUTPUT);
   }
 }
 
 void CC1101::end_tx()
 {
-  if(_gdo0 == _gdo2)
+  if(this->gdo0_ == this->gdo2_)
   {
 #ifdef USE_ESP8266
   #ifdef USE_ARDUINO
@@ -658,11 +691,11 @@ void CC1101::end_tx()
     portENABLE_INTERRUPTS()
   #endif
 #endif
-    _gdo0->pin_mode(gpio::FLAG_INPUT);
+    this->gdo0_->pin_mode(gpio::FLAG_INPUT);
   }
 
-  set_rx();
-  set_rx(); // yes, twice (really?)
+  this->set_rx();
+  this->set_rx(); // yes, twice (really?)
 }
 
 } // namespace cc1101
