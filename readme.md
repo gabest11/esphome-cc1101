@@ -1,3 +1,15 @@
+This version is no longer maintained, please test directly the [esphome pull request](https://github.com/esphome/esphome/pull/6300).
+
+```
+external_components:
+  - source: github://pr#6300
+    components: [ cc1101 ]
+```
+
+[Documentation preview](https://deploy-preview-3897--esphome.netlify.app/components/cc1101.html)
+
+---
+
 This is a CC1101 transceiver component that works with esphome's remote_transmitter/remote_receiver.
   
 It can be compiled with Arduino or the esp-idf framework and should support any esphome compatible board through the SPI Bus.
